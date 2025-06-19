@@ -1,0 +1,31 @@
+@import url('https://fonts.googleapis.com/css2?family=Neuton:ital,wght@0,200;0,300;0,400;0,700;0,800;1,400&display=swap');
+@import "tailwindcss";
+
+
+:root{
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: "Neuton", serif ;
+}
+body{
+  background: #f0f4f8;
+  color: #222222;
+}
+
+::-webkit-scrollbar{
+  display: none;
+}
+
+@keyframes shrinkBar {
+    from{
+        width: 100%;
+    }
+    to{
+        width: 0%;
+    }
+}
+
+.animate-shrink-bar{
+    animation: shrinkBar 3s linear forwards;
+}
