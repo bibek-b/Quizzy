@@ -4,6 +4,7 @@ import { useLocation } from "react-router-dom";
 import { QuizContext } from "../Context/QuizContext";
 
 const EditQuiz = () => {
+  
   return (
     <div>
       <CreateQuiz  />

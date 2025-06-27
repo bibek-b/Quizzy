@@ -6,7 +6,7 @@ const Home = () => {
   <>
       <div className="w-full flex items-center justify-center h-[82vh]">
       <div className="flex items-center justify-between w-[80%]">
-      <img src= {einstein} alt="Like Einstein" className="w-40 animate-bounce" />
+      <img src= {einstein} alt="Like Einstein" className="w-40" />
         <div className="text-center space-y-5">
           <h1 className="text-6xl flex">
           Welcome to,
@@ -15,8 +15,7 @@ const Home = () => {
           </span>
         </h1>
         <p className="w-100 text-2xl">
-          "Think Fast. Score High. Take on tricky questions, earn your spot on
-          the leaderboard, and prove you’re the quiz master."
+          "Think Fast. Score High. And be a Quiz Master."
         </p>
            <div className="space-x-10 flex items-center justify-center">
             <Link to='/quiz/play' className="border flex items-center justify-center w-32 bg-orange-400 hover:bg-orange-600 rounded border-0 outline-0 p-1 text-2xl cursor-pointer text-white hover:bg-[#]">Take a Quiz</Link>

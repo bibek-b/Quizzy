@@ -7,30 +7,48 @@ const CreateQuiz = () => {
   const [startShrink, setStartShrink] = useState(false);
   const nav = useNavigate();
 
-  const { isQuizEdit, setQuiz, currentQuizIndex, quiz } = useContext(QuizContext);
+  const { isQuizEdit, setQuiz, currentQuizIndex, quiz } =
+    useContext(QuizContext);
 
   const currentQuiz = quiz[currentQuizIndex] || {};
-  const quizDetail = currentQuiz.quizDetail || {};
+  const quizDetail = currentQuiz?.quizDetail || {};
+  useEffect(() => {
+    window.scrollTo({ top: 0 });
+    if (isQuizEdit) {
+      if (currentQuiz?.timeLimit) {
+        setIsChecked(true);
+      }
+    }
+  }, []);
 
-  // useEffect(() => {
-  //   window.scrollTo({top: 0});
-  //   if(isQuizEdit){
-  //     setTitle(quizDetails[0]?.title);
-  //     setDesc(quizDetails[0]?.desc);
-  //     setNoOfQues(quizDetails[0]?.noOfQues);
-  //     setQuizType(quizDetails[0]?.quizType);
-  //     setTimeLimit(quizDetails[0]?.timeLimit);
-  //   }
-  // },[]);
+  //reset time limit if there is time limit after user unchecked the time limit
+  useEffect(() => {
+    if (!isChecked) {
+      setQuiz((prev) => {
+        const updated = [...prev];
+
+        updated[currentQuizIndex] = {
+          ...updated[currentQuizIndex],
+          timeLimit: 0
+        };
+
+        return updated;
+      });
+    }
+  }, [isChecked]);
+
+
 
   const handleSubmit = (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
 
-    const formValues =
-      Object.fromEntries(formData);
+    const formValues = Object.fromEntries(formData);
 
-    if (formValues.desc.trim().length < 1 || formValues.title.trim().length < 1) {
+    if (
+      formValues.desc.trim().length < 1 ||
+      formValues.title.trim().length < 1
+    ) {
       setFillFields(true);
 
       setTimeout(() => {
@@ -41,13 +59,19 @@ const CreateQuiz = () => {
         setStartShrink(false);
       }, 3000);
     } else {
-      const quizDetail = {title: formValues.title, desc: formValues.desc, noOfQues: Number(formValues.noOfQues), type: formValues.type, timeLimit: Number(formValues.timeLimit)};
-      setQuiz(prev => {
-         const updated = [...prev];
+      const quizDetail = {
+        title: formValues.title,
+        desc: formValues.desc,
+        noOfQues: Number(formValues.noOfQues),
+        type: formValues.type,
+        timeLimit: Number(formValues.timeLimit),
+      };
+      setQuiz((prev) => {
+        const updated = [...prev];
         updated[currentQuizIndex] = {
           ...updated[currentQuizIndex],
-          quizDetail
-        }
+          quizDetail,
+        };
         return updated;
       });
       if (isQuizEdit) {
@@ -90,7 +114,7 @@ const CreateQuiz = () => {
           className=" outline-0 rounded  text-[22px] bg-gray-300 p-2"
           placeholder="Quiz title"
           min={20}
-          defaultValue={quizDetail?.title}
+          defaultValue={quizDetail?.title || currentQuiz?.title}
         />
         <label htmlFor="description" className="font-bold">
           Description
@@ -101,8 +125,7 @@ const CreateQuiz = () => {
           placeholder="Enter description here"
           className="outline-0 rounded p-2  bg-gray-300 text-[22px] resize-none "
           rows={2}
-          defaultValue={quizDetail?.desc}
-
+          defaultValue={quizDetail?.desc || currentQuiz?.desc}
         />
 
         <div className="flex justify-between ">
@@ -116,8 +139,7 @@ const CreateQuiz = () => {
               placeholder="2"
               className="outline-0 rounded p-2  bg-gray-300 text-[22px] w-35"
               min={2}
-              defaultValue={quizDetail?.noOfQues || 2}
-
+              defaultValue={quizDetail?.noOfQues || currentQuiz?.noOfQues || 2}
             />
           </div>
 
@@ -129,7 +151,7 @@ const CreateQuiz = () => {
               name="type"
               className="outline-0 rounded p-2  bg-gray-300 text-[22px]  w-35"
             >
-              <option value="mcq">{"MCQ"}</option>
+              <option value="MCQ">{currentQuiz?.type || "MCQ"}</option>
             </select>
           </div>
 
@@ -138,7 +160,8 @@ const CreateQuiz = () => {
               <input
                 type="checkbox"
                 className="w-[17px] h-[17px]"
-                onClick={() => setIsChecked(!isChecked)}
+                onChange={(e) => setIsChecked(e.target.checked)}
+                checked={isChecked}
               />
               <label htmlFor="timeLimit" className="font-bold">
                 Time Limit
@@ -146,7 +169,7 @@ const CreateQuiz = () => {
             </div>
             <div className="flex ">
               <input
-          defaultValue={quizDetail?.timeLimit}
+                defaultValue={quizDetail?.timeLimit || currentQuiz?.timeLimit}
                 type="number"
                 name="timeLimit"
                 placeholder="in minutes"

@@ -27,7 +27,7 @@ const App = () => {
           <Route path="/quiz/edit/ques" element={<EditQues />} />
           <Route path="/quiz/preview" element={<PreviewQuiz />} />
           <Route path="/quiz/play" element={<PlayQuiz />} />
-          <Route path="/quiz/play/:category" element={<QuizPlaying />} />
+          <Route path="/quiz/play/:quizDetails" element={<QuizPlaying />} />
           </Route>
       </Routes>
     // </BrowserRouter>

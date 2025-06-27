@@ -51,9 +51,9 @@ export const QuizContextProvider = ({ children }) => {
 
   useEffect(() => {
     // get the page load info from performance api
-      const navEntries = performance.getEntriesByType("navigation");
-      //check the page is load by reload
-      const isReload = navEntries[0]?.type === "reload";
+    const navEntries = performance.getEntriesByType("navigation");
+    //check the page is load by reload
+    const isReload = navEntries[0]?.type === "reload";
     const handleTabClose = (e) => {
       //if not it is tab or browser close - remove the data from local storage
       if (!isReload) {
@@ -72,32 +72,43 @@ export const QuizContextProvider = ({ children }) => {
   useEffect(() => {
     const currentPath = location.pathname;
 
-    const isCreatePath = currentPath.startsWith('/quiz/create');
-    const isAddQuesPath = currentPath.startsWith('/quiz/create/addQues');
+    const isCreatePath = currentPath.startsWith("/quiz/create");
+    const isAddQuesPath = currentPath.startsWith("/quiz/create/addQues");
+    const isPreviewPath = currentPath.startsWith("/quiz/preview");
+    const isEditDashboardQuizDetailPath = currentPath.startsWith(
+      "/quiz/edit/quizDetail"
+    );
+    const isEditDashboardQuesPath = currentPath.startsWith("/quiz/edit/ques");
 
-    if(!isCreatePath && !isAddQuesPath){
-      localStorage.removeItem('quizData');
+    if (
+      !isCreatePath &&
+      !isAddQuesPath &&
+      !isPreviewPath &&
+      !isEditDashboardQuizDetailPath &&
+      !isEditDashboardQuesPath
+    ) {
+      localStorage.removeItem("quizData");
 
       setQuiz([
-          {
-            quizDetail: {
-              title: "",
-              desc: "",
-              noOfQues: 2,
-              type: "MCQ",
-              timeLimit: null,
-            },
-            questions: [
-              {
-                question: "",
-                options: ["", "", "", ""],
-                correctAnsIndex: null,
-              },
-            ],
+        {
+          quizDetail: {
+            title: "",
+            desc: "",
+            noOfQues: 2,
+            type: "MCQ",
+            timeLimit: null,
           },
-        ]);
+          questions: [
+            {
+              question: "",
+              options: ["", "", "", ""],
+              correctAnsIndex: null,
+            },
+          ],
+        },
+      ]);
     }
-  },[location])
+  }, [location]);
   return (
     <QuizContext.Provider
       value={{
@@ -106,6 +117,7 @@ export const QuizContextProvider = ({ children }) => {
         setIsQuizEdit,
         isQuizEdit,
         currentQuizIndex,
+        setCurrentQuizIndex
       }}
     >
       {children}

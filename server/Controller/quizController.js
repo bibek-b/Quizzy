@@ -4,7 +4,7 @@ import UserModel from "../Models/UserModel.js";
 
 export const getAllQuiz = async (req, res) => {
   try {
-    const allQuiz = await QuizDetailModel.find();
+    const allQuiz = await QuizDetailModel.find().populate("questions");
     return res.status(200).json(allQuiz);
   } catch (error) {
     console.log(error);
@@ -27,11 +27,10 @@ export const getQuiz = async (req, res) => {
 
 //get all quiz of a user
 export const getAllQuizOfUser = async (req, res) => {
+  
   try {
     const userId = req.params.userId;
-    const quizes = await QuizDetailModel.find({ userId }).populate(
-      "questions"
-    );
+    const quizes = await QuizDetailModel.find({ userId }).populate("questions");
     if (!quizes) return res.status(409).json({ error: "No quiz found!" });
 
     return res.status(200).json(quizes);
@@ -41,14 +40,28 @@ export const getAllQuizOfUser = async (req, res) => {
   }
 };
 
+export const getQuizById = async (req, res) => {
+  try {
+    const quiz = await QuizDetailModel.findById(req.params.quizId).populate(
+      "questions"
+    );
+    if (!quiz) return res.status(409).json({ error: "No quiz found!" });
+
+    return res.status(200).json(quiz);
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({ error: "Failed to get quiz !" });
+  }
+};
+
 export const addQuiz = async (req, res) => {
   const { quizDetail, questions, userId } = req.body;
-  console.log(questions)
+
+  if (!userId) return res.status(404).json({ Error: "User id is required!" });
+
   try {
     const insertedQuestions = await QuestionsModel.insertMany(questions);
     const questionIds = insertedQuestions.map((i) => i._id);
-    console.log(questionIds)
-    if (!userId) return res.status(404).json({ Error: "User id is required!" });
 
     const newQuiz = await QuizDetailModel.create({
       title: quizDetail.title,
@@ -71,7 +84,7 @@ export const addQuiz = async (req, res) => {
 };
 
 export const updateQuiz = async (req, res) => {
-  const { quizDetail, questionDetails, userId } = req.body;
+  const { quizDetail, questions, userId } = req.body;
   try {
     const quiz = await QuizDetailModel.findById(req.params.id);
     if (!quiz) {
@@ -85,7 +98,7 @@ export const updateQuiz = async (req, res) => {
 
     const updatedQuestionIds = [];
 
-    for (const question of questionDetails) {
+    for (const question of questions) {
       if (question._id) {
         await QuestionsModel.findByIdAndUpdate(question._id, {
           $set: {
@@ -102,10 +115,12 @@ export const updateQuiz = async (req, res) => {
           correctAnsIndex: question.correctAnsIndex,
         });
 
+        console.log("inserting question: "+newQuestion)
         updatedQuestionIds.push(newQuestion._id);
       }
     }
 
+    console.log({updatedQuestionIds})
     const updatedQuiz = await QuizDetailModel.findByIdAndUpdate(
       req.params.id,
       {
@@ -115,11 +130,12 @@ export const updateQuiz = async (req, res) => {
           quizType: quizDetail.quizType,
           timeLimit: quizDetail.timeLimit,
           noOfQues: quizDetail.noOfQues,
-          questionIds: updatedQuestionIds,
+          questionIds: [...updatedQuestionIds],
         },
       },
       { new: true }
     );
+
 
     return res.status(200).json({
       message: "Quiz Updated successfully with questions!",

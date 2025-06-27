@@ -13,38 +13,49 @@ import { UserContext } from "../Context/UserContext";
 const PreviewQuiz = () => {
   const [isPublishing, setIsPublishing] = useState(false);
 
-  const { quizDetails, questions, setIsQuizEdit, IsQuizEdit , sendQuizDetails, sendQuestions} =
-    useContext(QuizContext);
-    const { userId}  = useContext(UserContext);
+  const {
+    quizDetails,
+    quiz,
+    currentQuizIndex,
+    setIsQuizEdit,
+    isQuizEdit,
+    sendQuizDetails,
+    sendQuestions,
+  } = useContext(QuizContext);
+  const { userId } = useContext(UserContext);
   const nav = useNavigate();
-
+  const quizDetail = quiz[currentQuizIndex]?.quizDetail;
+  const questions = quiz[currentQuizIndex]?.questions;
 
   useEffect(() => {
     setTimeout(() => {
-       isPublishing &&  nav('/user/dashboard');
+      isPublishing && nav("/user/dashboard");
     }, 3000);
   }, [isPublishing]);
 
   const handleQuizEdit = () => {
     setIsQuizEdit(true);
     nav("/quiz/edit/quizDetail");
-
   };
-  const handleQuizPublish = async () => {
+  const handleQuizPublish = async (quizId) => {
 
-     try {
-     
-      const res = await ApiCall.post('/quiz/add', {quizDetail: quizDetails, questionDetails: questions, userId});
-      sendQuizDetails(res.data.quiz);
-      if(res.status == 200){
-     setIsPublishing(true);
+    if(!userId) return alert('You must be logged in to create quiz!')
+    try {
+      setIsPublishing(true);
 
+      if (isQuizEdit) {
+        const t = await ApiCall.put("/quiz/update/" + quizId, {
+          quizDetail,
+          questions,
+          userId,
+        });
+      } else {
+        await ApiCall.post("/quiz/add", { quizDetail, questions, userId });
       }
-     } catch (error) {
-      console.log(error)
-     }
-  }
-
+    } catch (error) {
+      console.log(error);
+    }
+  };
   return (
     <div className="h-[100%] flex flex-col items-center gap-10">
       {isPublishing && (
@@ -57,7 +68,7 @@ const PreviewQuiz = () => {
               text=""
               textColor="black"
             />
-            <h4>Publishing Your Quiz</h4>
+            <h4>{isQuizEdit ? "Saving": 'Publishing'} Your Quiz</h4>
             <button
               className="text-white rounded p-0.5 cursor-pointer hover:bg-red-700 hover:scale-105 transition-all duration-500 ease-in-out bg-red-500 shadow-lg"
               onClick={() => setIsPublishing(false)}
@@ -81,10 +92,10 @@ const PreviewQuiz = () => {
             Return
           </Link>
           <button
-            className="bg-green-500 p-1 rounded cursor-pointer hover:bg-green-600 hover:scale-105 transition-all duration-500 ease-in-out text-white "
-            onClick={handleQuizPublish}
+            className="bg-green-500 w-20 p-1 rounded cursor-pointer hover:bg-green-600 hover:scale-105 transition-all duration-500 ease-in-out text-white "
+            onClick={() => handleQuizPublish(quiz[0]?._id)}
           >
-            Publish
+            {isQuizEdit ? "Save" : "Publish"}
           </button>
         </div>
       </div>
@@ -98,22 +109,22 @@ const PreviewQuiz = () => {
         </button>
         <div className="text-center space-y-4">
           <h1 className="text-3xl font-bold ">
-            Quiz Title: {quizDetails?.title}{" "}
+            Quiz Title: {quizDetail?.title}{" "}
           </h1>
           <p className="text-center max-w-[400px] break-words ">
-            {quizDetails?.desc}
+            {quizDetail?.desc}
           </p>
         </div>
         <div className="w-[80%] space-y-5">
           <div className="text-2xl bg-red-200 p-2 text-xl rounded flex justify-between relative w-[40%] ">
             <div>
-              <h4>Type: {quizDetails?.quizType}</h4>
-              <h4>No. of Questions: {quizDetails?.noOfQues}</h4>
+              <h4>Type: {quizDetail?.type}</h4>
+              <h4>No. of Questions: {quizDetail?.noOfQues}</h4>
               <h4>
                 Time Limit:{" "}
-                {quizDetails?.timeLimit === 0
+                {!quizDetail?.timeLimit 
                   ? "Unlimited"
-                  : quizDetails?.timeLimit + " Minute(s)"}
+                  : quizDetail?.timeLimit + " Minute(s)"}
               </h4>
             </div>
           </div>
@@ -126,7 +137,8 @@ const PreviewQuiz = () => {
               <h3>{"Q.no. " + (index + 1) + ".  " + q?.question}</h3>
               <div className="flex flex-col gap-2">
                 {q?.options?.map((o, idx) => (
-                  <div key={idx}
+                  <div
+                    key={idx}
                     className={`flex items-center justify-between gap-3 ${
                       idx === q?.correctAnsIndex && "bg-green-200"
                     } p-1 rounded bg-gray-200`}

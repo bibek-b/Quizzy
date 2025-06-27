@@ -6,10 +6,12 @@ import arrowLeft from "../assets/arrow-left.svg";
 import correct from "../assets/correct.png";
 import wrong from "../assets/wrong.png";
 import { QuizContext } from "../Context/QuizContext.jsx";
-
+import ApiCall from "../ApiCallHooks/ApiCall.js";
+import { useMemo } from "react";
 
 const QuizPlaying = () => {
-  const [quiz, setQuiz] = useState([]);
+  // const [quiz, setQuiz] = useState([]);
+  const [quizList, setQuizList] = useState([]);
   const [currentQuesIndex, setCurrentQuesIndex] = useState(0);
   const [selectedOption, setSelectedOption] = useState("");
   const [score, setScore] = useState(0);
@@ -18,54 +20,64 @@ const QuizPlaying = () => {
   const [isBack, setIsBack] = useState(false);
   const [remainingTime, setRemainingTime] = useState();
   const [timeUp, setTimeUp] = useState(false);
-const { quizDetails, questions} = useContext(QuizContext);
-console.log(questions)
+  const [questionList, setQuestionList] = useState([]);
+  const { quiz } = useContext(QuizContext);
   const nav = useNavigate();
 
-  const { category } = useParams();
+  const { quizDetails } = useParams();
+  const quizId = quizDetails.split("-")[0];
 
   useEffect(() => {
-    window.scrollTo({ top: 0 });
+    window.scrollTo({top: 0})
+    const fetchQuiz = async () => {
+      try {
+        const quizResponse = await ApiCall.get("/quiz/quiz/" + quizId);
+        setQuizList(quizResponse.data);
+        setQuestionList(quizResponse.data.questions);
+      } catch (error) {
+        console.log(error);
+      }
+    };
+    fetchQuiz();
   }, []);
 
+
+const intervalRef = useRef(null); // For storing setInterval ID
+
+  const totalTimeInSec = useMemo(
+    () => (quizList?.timeLimit || 0) * 60,
+    [quizList]
+  );
   useEffect(() => {
-    // setQuiz(quizDetails.filter((q) => q.CategoryName == category));
-  }, [category]);
+  if (!totalTimeInSec || isFinished) return;
 
-  const currentTimeRef = useRef(0);
-  // const timerRef = useRef(null);
-    const totalTimeInSec = quiz[0]?.timeLimit * 60 || 0;
+  setRemainingTime((prev) =>
+    prev === undefined ? totalTimeInSec : prev
+  );
 
-  useEffect(() => {
-    if (isBack || isFinished) return;
+  if (isBack) return; 
 
-
-    if (currentTimeRef.current === 0) {
-      currentTimeRef.current = totalTimeInSec;
-    }
-    setRemainingTime(currentTimeRef.current);
-
-    const timerRef = setInterval(() => {
-      currentTimeRef.current -= 1;
-      setRemainingTime(currentTimeRef.current);
-
-      if (currentTimeRef.current <= 0) {
-        clearInterval(timerRef);
+  intervalRef.current = setInterval(() => {
+    setRemainingTime((prev) => {
+      if (prev <= 1) {
+        clearInterval(intervalRef.current);
         setTimeUp(true);
         setIsFinished(true);
+        return 0;
       }
-    }, 1000);
+      return prev - 1;
+    });
+  }, 1000);
+
+  return () => {
+    clearInterval(intervalRef.current);
+  };
+}, [totalTimeInSec, isBack, isFinished]);
 
 
-    return () => clearInterval(timerRef);
-  }, [quiz, isBack, isFinished]);
-
-  console.log(questions)
-  const ques = questions.flatMap((q) => q.Questions);
-
-  const handleClick = (option) => {
+  const handleClick = (idx) => {
     if (!isAnswered) {
-      setSelectedOption(option);
+      setSelectedOption(idx);
       setIsAnswered(true);
     }
   };
@@ -74,27 +86,25 @@ console.log(questions)
     setCurrentQuesIndex(currentQuesIndex + 1);
     setIsAnswered(false);
 
-    if (selectedOption == ques[currentQuesIndex]?.correctAns) {
+    if (selectedOption == questionList[currentQuesIndex]?.correctAnsIndex) {
       setScore(score + 1);
     }
 
-    if (currentQuesIndex + 1 == ques?.length) {
+    if (currentQuesIndex + 1 == questionList?.length) {
       setIsFinished(true);
     }
   };
-
   const handleBack = () => {
     setIsBack(true);
-    // nav("/play");
   };
+const minute = Math.floor(remainingTime / 60);
+const second = remainingTime % 60;
 
-  const minute = Math.floor(remainingTime / 60);
-  const second = remainingTime % 60;
+const elapsedTime = totalTimeInSec - remainingTime;
+const elapsedMin = Math.floor(elapsedTime / 60);
+const elapsedSec = elapsedTime % 60;
 
-  const elapsedTime = totalTimeInSec - currentTimeRef.current;
-  const elapsedMin = Math.floor(elapsedTime / 60);
-  const elapsedSec = elapsedTime % 60;
-  
+
   return (
     <div className="min-h-[100vh] w-full flex flex-col items-center pt-10 gap-5 transition-all duration-500 ease-in-out">
       <img
@@ -118,7 +128,7 @@ console.log(questions)
               </button>
               <button
                 className=" bg-green-500 p-1 text-white rounded w-[50px] cursor-pointer hover:bg-green-700 hover:scale-110 transition-transform duration-300 ease-in-out"
-                onClick={() => nav("/quiz/play")}
+                onClick={() => window.history.back()}
               >
                 Yes
               </button>
@@ -127,15 +137,15 @@ console.log(questions)
         </>
       )}
       <h1 className="text-3xl flex gap-2 text-[#333333]">
-        Quiz Category: <span className="font-bold">{category}</span>
+        Quiz Title: <span className="font-bold">{quizList?.title}</span>
       </h1>
       <div className="flex">
         <span className={`text-2xl ${timeUp && "animate-pulse"}`}>
-          {timeUp
+          {quizList?.timeLimit? timeUp
             ? "Time Up!"
             : `Time Left :   ${minute} :   ${
                 second < 10 ? "0" + second : second
-              } Seconds`}
+              } Seconds` : "Time: Unlimited" }
         </span>
       </div>
       <form className=" border p-6 w-150  max-h-120 text-2xl rounded bg-white border-0 shadow-lg ">
@@ -144,11 +154,14 @@ console.log(questions)
             <div className="text-center space-y-5">
               <h2 className="font-bold text-3xl">Congrats! Quiz Completed</h2>
               <p>
-                You scored <span className="font-bold">{score}</span> out of {" "}
-                <span>{ques.length}</span> in {elapsedMin > 0 && elapsedMin + " Minutes"}  { elapsedSec} Seconds
+                You scored <span className="font-bold">{score}</span> out of{" "}
+                <span>{questionList?.length}</span> {quizList?.timeLimit && <span>
+                  in{" "}
+                {elapsedMin > 0 && elapsedMin + " Minutes"} {elapsedSec} Seconds
+                </span>}
               </p>
               <button
-                onClick={() => nav(`/quiz/play/${category}`)}
+                onClick={() => nav(`/quiz/play/${quizId + '-'+quizList?.title}`)}
                 className="border rounded bg-[#4b0082] text-white p-1 cursor-pointer hover:bg-purple-800"
               >
                 Play Again
@@ -158,125 +171,39 @@ console.log(questions)
         ) : (
           <div className="space-y-8">
             <h3>
-              Q.no.{currentQuesIndex + 1}: {ques[currentQuesIndex]?.question}
+              Q.no.{currentQuesIndex + 1}:{" "}
+              {questionList[currentQuesIndex]?.question}
             </h3>
             <ul className="space-y-5">
-              <li
-                className={`border rounded border-gray-600 p-1 cursor-pointer hover:bg-[#555555] hover:text-white wrong:bg-red-700 correct:bg-green-500 ${
-                  isAnswered &&
-                  ques[currentQuesIndex]?.option[0] ==
-                    ques[currentQuesIndex]?.correctAns
-                    ? "bg-green-300"
-                    : isAnswered &&
-                      ques[currentQuesIndex]?.option1 == selectedOption
-                    ? "bg-red-400"
-                    : ""
-                }  flex items-center justify-between`}
-                onClick={(e) => handleClick(ques[currentQuesIndex]?.option1)}
-              >
-                {ques[currentQuesIndex]?.option1}
-                <img
-                  src={
+              {questionList[currentQuesIndex]?.options?.map((opt, idx) => (
+                <li
+                  className={`border rounded border-gray-600 p-1 cursor-pointer hover:bg-[#555555] hover:text-white wrong:bg-red-700 correct:bg-green-500 ${
                     isAnswered &&
-                    ques[currentQuesIndex]?.option1 ==
-                      ques[currentQuesIndex]?.correctAns
-                      ? correct
-                      : isAnswered &&
-                        ques[currentQuesIndex]?.option1 === selectedOption
-                      ? wrong
-                      : null
-                  }
-                  alt=""
-                  className="w-5"
-                />
-              </li>
-              <li
-                className={`border rounded border-gray-600 p-1 cursor-pointer hover:bg-[#555555] hover:text-white ${
-                  isAnswered &&
-                  ques[currentQuesIndex]?.option2 ==
-                    ques[currentQuesIndex]?.correctAns
-                    ? "bg-green-400"
-                    : isAnswered &&
-                      ques[currentQuesIndex]?.option2 == selectedOption
-                    ? "bg-red-400"
-                    : ""
-                } flex items-center justify-between `}
-                onClick={(e) => handleClick(ques[currentQuesIndex]?.option2)}
-              >
-                {ques[currentQuesIndex]?.option2}{" "}
-                <img
-                  src={
-                    isAnswered &&
-                    ques[currentQuesIndex]?.option2 ==
-                      ques[currentQuesIndex]?.correctAns
-                      ? correct
-                      : isAnswered &&
-                        ques[currentQuesIndex]?.option2 === selectedOption
-                      ? wrong
-                      : null
-                  }
-                  alt=""
-                  className="w-5"
-                />
-              </li>
-              <li
-                className={`border rounded border-gray-600 p-1 cursor-pointer hover:bg-[#555555] hover:text-white ${
-                  isAnswered &&
-                  ques[currentQuesIndex]?.option3 ==
-                    ques[currentQuesIndex]?.correctAns
-                    ? "bg-green-400"
-                    : isAnswered &&
-                      ques[currentQuesIndex]?.option3 == selectedOption
-                    ? "bg-red-400"
-                    : ""
-                } flex items-center justify-between`}
-                onClick={(e) => handleClick(ques[currentQuesIndex]?.option3)}
-              >
-                {ques[currentQuesIndex]?.option3}
-                <img
-                  src={
-                    isAnswered &&
-                    ques[currentQuesIndex]?.option3 ==
-                      ques[currentQuesIndex]?.correctAns
-                      ? correct
-                      : isAnswered &&
-                        ques[currentQuesIndex]?.option3 === selectedOption
-                      ? wrong
-                      : null
-                  }
-                  alt=""
-                  className="w-5"
-                />
-              </li>
-              <li
-                className={`border rounded border-gray-600 p-1 cursor-pointer hover:bg-[#555555] hover:text-white ${
-                  isAnswered &&
-                  ques[currentQuesIndex]?.option4 ==
-                    ques[currentQuesIndex]?.correctAns
-                    ? "bg-green-400"
-                    : isAnswered &&
-                      ques[currentQuesIndex]?.option4 == selectedOption
-                    ? "bg-red-400"
-                    : ""
-                } flex items-center justify-between`}
-                onClick={(e) => handleClick(ques[currentQuesIndex]?.option4)}
-              >
-                {ques[currentQuesIndex]?.option4}
-                <img
-                  src={
-                    isAnswered &&
-                    ques[currentQuesIndex]?.option4 ==
-                      ques[currentQuesIndex]?.correctAns
-                      ? correct
-                      : isAnswered &&
-                        ques[currentQuesIndex]?.option4 === selectedOption
-                      ? wrong
-                      : null
-                  }
-                  alt=""
-                  className="w-5"
-                />
-              </li>
+                    idx == questionList[currentQuesIndex]?.correctAnsIndex
+                      ? "bg-green-300"
+                      : isAnswered && idx == selectedOption
+                      ? "bg-red-400"
+                      : ""
+                  }  flex items-center justify-between`}
+                  onClick={(e) => handleClick(idx)}
+                >
+                  {opt}
+                  <img
+                    src={
+                      isAnswered &&
+                      idx == questionList[currentQuesIndex]?.correctAns
+                        ? correct
+                        : isAnswered &&
+                          questionList[currentQuesIndex]?.option1 ===
+                            selectedOption
+                        ? wrong
+                        : null
+                    }
+                    alt=""
+                    className="w-5"
+                  />
+                </li>
+              ))}
             </ul>
             <div className="text-center">
               {isAnswered && (
@@ -285,7 +212,9 @@ console.log(questions)
                   type="button"
                   onClick={handleNext}
                 >
-                  {currentQuesIndex + 1 === ques.length ? "Finish" : "Next"}
+                  {currentQuesIndex + 1 === questionList.length
+                    ? "Finish"
+                    : "Next"}
                 </button>
               )}
             </div>

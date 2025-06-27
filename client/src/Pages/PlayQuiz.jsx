@@ -5,14 +5,18 @@ import { Link, useNavigate } from "react-router-dom";
 import NoQuizBg from "../assets/NoQuizBg.jpg";
 import { CategoryList, QuestionList } from "../Lib/QuizList.js";
 import { OrbitProgress } from "react-loading-indicators";
+import ApiCall from '../ApiCallHooks/ApiCall.js';
+import {QuizContext} from '../Context/QuizContext.jsx';
 
 const PlayQuiz = () => {
-  const [quiz, setQuiz] = useState([]);
+  const [quizList, setQuizList] = useState([]);
   const [questionInfo, setQuestionInfo] = useState(null);
   const [isPlayed, setIsPlayed] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const isLoadingRef = useRef();
   const nav = useNavigate("");
+
+  const { currentQuizIndex, setCurrentQuizIndex} = useContext(QuizContext);
 
   useEffect(() => {
     const seen = new Set();
@@ -25,20 +29,33 @@ const PlayQuiz = () => {
     const isQuesAdded = uinqueCategories.filter((u) =>
       QuestionList.some((q) => q.CategoryName === u.Category)
     );
-    setQuiz(isQuesAdded);
+    // setQuiz(isQuesAdded);
+
+    const fetchAllQuiz = async () => {
+      try {
+        const quizResponse = await ApiCall.get('/quiz');
+        setQuizList(quizResponse.data);
+      } catch (error) {
+        console.log(error);
+      }
+    }
+    fetchAllQuiz();
   }, []);
-
-  const handlePlay = (category) => {
+  const handlePlay = (title, quizId,idx) => {
+    setCurrentQuizIndex(idx);
     setIsPlayed(true);
-
-    setQuestionInfo(QuestionList.filter((q) => q.CategoryName === category));
+    const quiz = quizList.filter(q => q._id === quizId);
+    console.log(quizList[idx])
+    const questions = quiz.map(q => q.questions);
+    setQuestionInfo([...questions]);
     isPlayed && nav(`/quiz/play/${category}`);
   };
-  const handleStart = (category) => {
+  const handleStart = (quizId,title) => {
+    const noSpaces = title.replace(/\s+/g, '');
     setIsLoading(true);
     isLoadingRef.current = true;
     setTimeout(() => {
-      if (isLoadingRef.current) nav(`/quiz/play/${category}`);
+      if (isLoadingRef.current) nav(`/quiz/play/${quizId + '-' + noSpaces}`);
     }, 3000);
   };
 
@@ -47,6 +64,7 @@ const PlayQuiz = () => {
     isLoadingRef.current = false;
   };
 
+    const currentQuiz = quizList[currentQuizIndex] || [];
 
   return (
     <div className={`h-[81vh] `}>
@@ -85,8 +103,9 @@ const PlayQuiz = () => {
                       <>
                         <div className="flex justify-between ">
                           <h1 className="font-bold">
-                            Category: {q.CategoryName}
+                            Quiz Title: {currentQuiz?.title}
                           </h1>
+                        
                           <img
                             src={cross}
                             alt="cancel"
@@ -95,17 +114,17 @@ const PlayQuiz = () => {
                           />
                         </div>
                         <div>
-                          <span className="text-xl">{q.desc}</span>
+                          <span className="text-xl">{currentQuiz?.desc}</span>
                         </div>
                         <div className="space-y-2">
-                          <p>Total Question: {q.Questions.length}</p>
-                          <p>Type: {q.type}</p>
-                          <p>Time Limit: {q.timeLimit} minutes</p>
+                          <p>Total Question: {currentQuiz?.questions.length}</p>
+                          <p>Type: {currentQuiz?.quizType}</p>
+                          <p>Time Limit: {currentQuiz?.timeLimit ? currentQuiz?.timeLimit + 'minutes' : 'Unlimited'   } </p>
                         </div>
                         <div className="text-center">
                           <button
                             className="bg-green-400 text-white p-1 rounded w-18 cursor-pointer hover:bg-green-700 hover:scale-115 transition-transform duration-500 ease-in-out"
-                            onClick={() => handleStart(q.CategoryName)}
+                            onClick={() => handleStart(currentQuiz?._id,currentQuiz?.title)}
                           >
                             Start
                           </button>
@@ -118,16 +137,16 @@ const PlayQuiz = () => {
           </>
         )}
         <div className="flex w-[90%] justify-start gap-8 text-3xl overflow-y-scroll p-4">
-          {quiz?.map((q) => (
+          {quizList ?.map((q, idx) => (
             <div className="border min-w-60 max-w-60 min-h-70 max-h-70 flex flex-col gap-2 items-center rounded  p-1 cursor-pointer transition-transform duration-500 ease-in-out hover:scale-[1.09] shadow-lg shadow-black group">
               <img
                 src={q.CategoryImg ? q.CategoryImg : NoQuizBg}
                 alt="img"
                 className="w-60 h-40 object-cover "
               />
-              <h2>{q.Category} Quiz</h2>
+              <h2>{q?.title}</h2>
               <button
-                onClick={() => handlePlay(q?.Category)}
+                onClick={() => handlePlay(q?.title, q?._id, idx)}
                 className="flex items-center justify-center cursor-pointer gap-3 bg-green-400 text-white p-1 rounded opacity-0 group-hover:opacity-100 transition duration-500 "
               >
                 <p>Play</p>
