@@ -31,9 +31,9 @@ A full-stack MERN (MongoDB, Express, React, Node.js) quiz builder app where user
    git clone https://github.com/bibek-b/Quizzy.git
 
 ------------Setup Frontend--------
- **Install dependencies and start**
 
 Go to /client (in terminal - cd client)
+ **Install dependencies and start**
  - npm install
  - npm start
 
